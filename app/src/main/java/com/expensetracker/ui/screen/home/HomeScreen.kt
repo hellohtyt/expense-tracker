@@ -25,6 +25,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     var selectedTransactionForDetails by remember { mutableStateOf(null as com.expensetracker.data.entity.Transaction?) }
     
     LazyColumn(
@@ -220,7 +221,11 @@ fun HomeScreen(
     selectedTransactionForDetails?.let { transaction ->
         TransactionDetailsDialog(
             transaction = transaction,
-            onDismiss = { selectedTransactionForDetails = null }
+            categories = categories,
+            onDismiss = { selectedTransactionForDetails = null },
+            onCategoryUpdate = { newCategory ->
+                viewModel.updateTransactionCategory(transaction, newCategory)
+            }
         )
     }
 } 

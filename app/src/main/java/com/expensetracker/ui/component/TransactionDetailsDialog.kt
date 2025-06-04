@@ -6,8 +6,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.expensetracker.data.entity.Category
 import com.expensetracker.data.entity.Transaction
 import com.expensetracker.data.entity.TransactionType
 import kotlinx.datetime.TimeZone
@@ -27,8 +29,12 @@ import java.util.*
 @Composable
 fun TransactionDetailsDialog(
     transaction: Transaction,
-    onDismiss: () -> Unit
+    categories: List<Category>,
+    onDismiss: () -> Unit,
+    onCategoryUpdate: (String?) -> Unit
 ) {
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -127,10 +133,11 @@ fun TransactionDetailsDialog(
                         DetailRow(label = "Payee", value = payee)
                     }
                     
-                    // Category
-                    DetailRow(
-                        label = "Category", 
-                        value = transaction.category ?: "Uncategorized"
+                    // Category with edit button
+                    EditableDetailRow(
+                        label = "Category",
+                        value = transaction.category ?: "Uncategorized",
+                        onEditClick = { showCategoryDialog = true }
                     )
                     
                     // Date and Time
@@ -171,15 +178,46 @@ fun TransactionDetailsDialog(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Close button
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Close")
+                    OutlinedButton(
+                        onClick = { showCategoryDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Edit Category")
+                    }
+                    
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Close")
+                    }
                 }
             }
         }
+    }
+    
+    // Category Selection Dialog
+    if (showCategoryDialog) {
+        CategorySelectionDialog(
+            categories = categories,
+            currentCategory = transaction.category,
+            onCategorySelected = { newCategory ->
+                onCategoryUpdate(newCategory)
+                showCategoryDialog = false
+            },
+            onDismiss = { showCategoryDialog = false }
+        )
     }
 }
 
@@ -205,5 +243,51 @@ private fun DetailRow(
             textAlign = TextAlign.End,
             modifier = Modifier.weight(2f)
         )
+    }
+}
+
+@Composable
+private fun EditableDetailRow(
+    label: String,
+    value: String,
+    onEditClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        
+        Row(
+            modifier = Modifier.weight(2f),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f)
+            )
+            
+            IconButton(
+                onClick = onEditClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Edit,
+                    contentDescription = "Edit $label",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 } 

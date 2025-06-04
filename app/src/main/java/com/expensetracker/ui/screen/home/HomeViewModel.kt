@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.expensetracker.data.entity.Transaction
 import com.expensetracker.data.entity.TransactionType
+import com.expensetracker.data.entity.Category
 import com.expensetracker.repository.CategoryRepository
 import com.expensetracker.repository.TransactionRepository
 import com.expensetracker.sms.SmsReader
@@ -37,6 +38,13 @@ class HomeViewModel @Inject constructor(
     
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    
+    val categories: StateFlow<List<Category>> = categoryRepository.getAllCategories()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
     
     private val smsReader = SmsReader(context)
     
@@ -128,6 +136,17 @@ class HomeViewModel @Inject constructor(
                     isLoading = false,
                     errorMessage = "Error syncing SMS: ${e.message}"
                 )
+            }
+        }
+    }
+    
+    fun updateTransactionCategory(transaction: Transaction, categoryName: String?) {
+        viewModelScope.launch {
+            try {
+                val updatedTransaction = transaction.copy(category = categoryName)
+                transactionRepository.updateTransaction(updatedTransaction)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(errorMessage = "Failed to update category: ${e.message}")
             }
         }
     }

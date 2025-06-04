@@ -20,7 +20,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.expensetracker.data.entity.Transaction
 import com.expensetracker.data.entity.TransactionType
+import com.expensetracker.data.entity.Category
 import com.expensetracker.ui.component.TransactionDetailsDialog
+import com.expensetracker.ui.component.CategorySelectionDialog
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import java.text.NumberFormat
@@ -32,6 +34,7 @@ fun TransactionsScreen(
     viewModel: TransactionsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val categories by viewModel.categories.collectAsState()
     var selectedTransactionForDetails by remember { mutableStateOf(null as Transaction?) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
@@ -161,6 +164,7 @@ fun TransactionsScreen(
                             transaction = transaction,
                             isSelected = uiState.selectedTransactionIds.contains(transaction.id),
                             isSelectionMode = uiState.isSelectionMode,
+                            categories = categories,
                             onClick = { 
                                 if (uiState.isSelectionMode) {
                                     viewModel.toggleTransactionSelection(transaction.id)
@@ -173,6 +177,9 @@ fun TransactionsScreen(
                                     viewModel.enterSelectionMode()
                                     viewModel.toggleTransactionSelection(transaction.id)
                                 }
+                            },
+                            onCategoryUpdate = { categoryName ->
+                                viewModel.updateTransactionCategory(transaction, categoryName)
                             }
                         )
                     }
@@ -211,7 +218,11 @@ fun TransactionsScreen(
     selectedTransactionForDetails?.let { transaction ->
         TransactionDetailsDialog(
             transaction = transaction,
-            onDismiss = { selectedTransactionForDetails = null }
+            categories = categories,
+            onDismiss = { selectedTransactionForDetails = null },
+            onCategoryUpdate = { newCategory ->
+                viewModel.updateTransactionCategory(transaction, newCategory)
+            }
         )
     }
 }
@@ -222,9 +233,13 @@ private fun SelectableTransactionItem(
     transaction: Transaction,
     isSelected: Boolean,
     isSelectionMode: Boolean,
+    categories: List<Category>,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onCategoryUpdate: (String?) -> Unit
 ) {
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -296,19 +311,41 @@ private fun SelectableTransactionItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                // Category and date
+                // Category chip with edit functionality
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = transaction.category ?: "Uncategorized",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    // Category chip that can be clicked to change
+                    if (!isSelectionMode) {
+                        AssistChip(
+                            onClick = { showCategoryDialog = true },
+                            label = { 
+                                Text(
+                                    text = transaction.category ?: "Add Category",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Filled.Category,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            modifier = Modifier.weight(1f, false)
+                        )
+                    } else {
+                        Text(
+                            text = transaction.category ?: "Uncategorized",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                     
                     val localDateTime = transaction.timestamp.toLocalDateTime(TimeZone.currentSystemDefault())
                     Text(
@@ -342,5 +379,18 @@ private fun SelectableTransactionItem(
                 textAlign = TextAlign.End
             )
         }
+    }
+    
+    // Category Selection Dialog
+    if (showCategoryDialog) {
+        CategorySelectionDialog(
+            categories = categories,
+            currentCategory = transaction.category,
+            onCategorySelected = { newCategory ->
+                onCategoryUpdate(newCategory)
+                showCategoryDialog = false
+            },
+            onDismiss = { showCategoryDialog = false }
+        )
     }
 } 
