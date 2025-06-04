@@ -38,10 +38,10 @@ class TransactionsViewModel @Inject constructor(
         )
     
     init {
-        loadTransactions()
+        observeTransactions()
     }
     
-    private fun loadTransactions() {
+    private fun observeTransactions() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             
@@ -134,9 +134,39 @@ class TransactionsViewModel @Inject constructor(
             try {
                 val updatedTransaction = transaction.copy(category = categoryName)
                 transactionRepository.updateTransaction(updatedTransaction)
+                
+                // Apply smart categorization to other transactions with same payee
+                if (categoryName != null && !transaction.payee.isNullOrBlank()) {
+                    applyCategoryToSimilarPayees(transaction.payee, categoryName)
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(errorMessage = e.message)
             }
+        }
+    }
+    
+    private suspend fun applyCategoryToSimilarPayees(payee: String, categoryName: String) {
+        try {
+            // Get all uncategorized transactions with the same payee
+            val transactions = _uiState.value.transactions.filter { 
+                it.payee == payee && it.category.isNullOrBlank() 
+            }
+            
+            // Update them with the new category
+            transactions.forEach { transaction ->
+                val updatedTransaction = transaction.copy(category = categoryName)
+                transactionRepository.updateTransaction(updatedTransaction)
+            }
+        } catch (e: Exception) {
+            // Silent fail for smart categorization
+        }
+    }
+    
+    suspend fun getSuggestedCategory(payee: String?): String? {
+        return if (!payee.isNullOrBlank()) {
+            transactionRepository.getLastCategoryForPayee(payee)
+        } else {
+            null
         }
     }
 } 

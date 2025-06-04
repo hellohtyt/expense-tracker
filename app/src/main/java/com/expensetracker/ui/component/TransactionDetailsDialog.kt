@@ -34,6 +34,12 @@ fun TransactionDetailsDialog(
     onCategoryUpdate: (String?) -> Unit
 ) {
     var showCategoryDialog by remember { mutableStateOf(false) }
+    var currentTransaction by remember(transaction) { mutableStateOf(transaction) }
+    
+    // Update current transaction when category changes
+    LaunchedEffect(transaction) {
+        currentTransaction = transaction
+    }
     
     Dialog(
         onDismissRequest = onDismiss,
@@ -78,7 +84,7 @@ fun TransactionDetailsDialog(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (transaction.type == TransactionType.CREDIT) 
+                        containerColor = if (currentTransaction.type == TransactionType.CREDIT) 
                             MaterialTheme.colorScheme.primaryContainer 
                         else 
                             MaterialTheme.colorScheme.errorContainer
@@ -91,26 +97,26 @@ fun TransactionDetailsDialog(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = if (transaction.type == TransactionType.CREDIT) "+" else "-",
+                            text = if (currentTransaction.type == TransactionType.CREDIT) "+" else "-",
                             style = MaterialTheme.typography.headlineMedium,
-                            color = if (transaction.type == TransactionType.CREDIT) 
+                            color = if (currentTransaction.type == TransactionType.CREDIT) 
                                 MaterialTheme.colorScheme.onPrimaryContainer 
                             else 
                                 MaterialTheme.colorScheme.onErrorContainer
                         )
                         Text(
-                            text = "₹${NumberFormat.getNumberInstance(Locale("en", "IN")).format(transaction.amount)}",
+                            text = "₹${NumberFormat.getNumberInstance(Locale("en", "IN")).format(currentTransaction.amount)}",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (transaction.type == TransactionType.CREDIT) 
+                            color = if (currentTransaction.type == TransactionType.CREDIT) 
                                 MaterialTheme.colorScheme.onPrimaryContainer 
                             else 
                                 MaterialTheme.colorScheme.onErrorContainer
                         )
                         Text(
-                            text = transaction.type.name,
+                            text = currentTransaction.type.name,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (transaction.type == TransactionType.CREDIT) 
+                            color = if (currentTransaction.type == TransactionType.CREDIT) 
                                 MaterialTheme.colorScheme.onPrimaryContainer 
                             else 
                                 MaterialTheme.colorScheme.onErrorContainer
@@ -129,19 +135,19 @@ fun TransactionDetailsDialog(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // Payee
-                    transaction.payee?.let { payee ->
+                    currentTransaction.payee?.let { payee ->
                         DetailRow(label = "Payee", value = payee)
                     }
                     
                     // Category with edit button
                     EditableDetailRow(
                         label = "Category",
-                        value = transaction.category ?: "Uncategorized",
+                        value = currentTransaction.category ?: "Uncategorized",
                         onEditClick = { showCategoryDialog = true }
                     )
                     
                     // Date and Time
-                    val localDateTime = transaction.timestamp.toLocalDateTime(TimeZone.currentSystemDefault())
+                    val localDateTime = currentTransaction.timestamp.toLocalDateTime(TimeZone.currentSystemDefault())
                     DetailRow(
                         label = "Date", 
                         value = "${localDateTime.dayOfMonth}/${localDateTime.monthNumber}/${localDateTime.year}"
@@ -152,7 +158,7 @@ fun TransactionDetailsDialog(
                     )
                     
                     // SMS Sender
-                    DetailRow(label = "Bank/Sender", value = transaction.sender)
+                    DetailRow(label = "Bank/Sender", value = currentTransaction.sender)
                     
                     // Full SMS Message
                     Spacer(modifier = Modifier.height(8.dp))
@@ -168,7 +174,7 @@ fun TransactionDetailsDialog(
                         )
                     ) {
                         Text(
-                            text = transaction.message,
+                            text = currentTransaction.message,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(12.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -211,8 +217,9 @@ fun TransactionDetailsDialog(
     if (showCategoryDialog) {
         CategorySelectionDialog(
             categories = categories,
-            currentCategory = transaction.category,
+            currentCategory = currentTransaction.category,
             onCategorySelected = { newCategory ->
+                currentTransaction = currentTransaction.copy(category = newCategory)
                 onCategoryUpdate(newCategory)
                 showCategoryDialog = false
             },

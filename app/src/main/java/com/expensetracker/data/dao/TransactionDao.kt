@@ -54,9 +54,25 @@ interface TransactionDao {
     
     @Query("DELETE FROM transactions WHERE id = :transactionId")
     suspend fun deleteTransactionById(transactionId: String)
+    
+    // Smart categorization: Get the most recent category used for a payee
+    @Query("SELECT category FROM transactions WHERE payee = :payee AND category IS NOT NULL ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLastCategoryForPayee(payee: String): String?
+    
+    // Payee-wise spending analytics
+    @Query("SELECT payee, SUM(amount) as total FROM transactions WHERE payee IS NOT NULL AND type = 'DEBIT' GROUP BY payee ORDER BY total DESC")
+    suspend fun getPayeeWiseSpending(): List<PayeeAmount>
+    
+    @Query("SELECT payee, SUM(amount) as total FROM transactions WHERE payee IS NOT NULL AND type = 'DEBIT' AND timestamp BETWEEN :startDate AND :endDate GROUP BY payee ORDER BY total DESC")
+    suspend fun getPayeeWiseSpendingByDateRange(startDate: Instant, endDate: Instant): List<PayeeAmount>
 }
 
 data class CategoryAmount(
     val category: String,
+    val total: Double
+)
+
+data class PayeeAmount(
+    val payee: String,
     val total: Double
 ) 

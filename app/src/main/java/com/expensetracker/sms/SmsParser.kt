@@ -19,6 +19,8 @@ class SmsParser {
         
         // Debit patterns
         private val DEBIT_PATTERNS = listOf(
+            // ICICI Bank specific: "debited for Rs 35.00 on 04-Jun-25; Srikonda Santho credited"
+            Pattern.compile("debited\\s+for\\s+Rs\\s*([\\d,]+\\.?\\d*).*?;\\s*([A-Z][A-Z\\s]+)\\s+credited", Pattern.CASE_INSENSITIVE),
             // Rs 1234.56 debited from A/c ending 1234 on 01-01-23 to PAYEE_NAME
             Pattern.compile("Rs\\s*([\\d,]+\\.?\\d*)\\s*debited.*?to\\s+([^\\s].+?)(?:\\s+at|\\s+on|\\.|$)", Pattern.CASE_INSENSITIVE),
             // Amount Rs 1234.56 debited from account ending 1234 at PAYEE_NAME

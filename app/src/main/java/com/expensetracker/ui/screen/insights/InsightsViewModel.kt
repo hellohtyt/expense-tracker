@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.expensetracker.data.dao.CategoryAmount
+import com.expensetracker.data.dao.PayeeAmount
 import com.expensetracker.data.entity.TransactionType
 import com.expensetracker.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,6 +36,7 @@ data class InsightsUiState(
     val monthlyIncome: Double = 0.0,
     val monthlyExpenses: Double = 0.0,
     val categoryExpenses: List<CategoryAmount> = emptyList(),
+    val payeeSpending: List<PayeeAmount> = emptyList(),
     val totalTransactions: Int = 0,
     val avgTransactionAmount: Double = 0.0,
     val largestExpense: Double = 0.0,
@@ -76,6 +78,9 @@ class InsightsViewModel @Inject constructor(
         loadInsights()
     }
     
+    fun getTransactionsForPayee(payeeName: String) = 
+        transactionRepository.getTransactionsByPayee(payeeName)
+    
     private fun loadInsights() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
@@ -116,6 +121,15 @@ class InsightsViewModel @Inject constructor(
                         .sortedByDescending { it.total }
                     
                     _uiState.value = _uiState.value.copy(categoryExpenses = categoryExpenses)
+                }
+                
+                launch {
+                    // Payee-wise spending analytics
+                    val payeeSpending = transactionRepository.getPayeeWiseSpendingByDateRange(periodStart, periodEnd)
+                        .sortedByDescending { it.total }
+                        .take(10) // Show top 10 payees
+                    
+                    _uiState.value = _uiState.value.copy(payeeSpending = payeeSpending)
                 }
                 
                 launch {

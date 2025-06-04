@@ -1,6 +1,7 @@
 package com.expensetracker.ui.screen.insights
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,8 +20,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.expensetracker.data.dao.CategoryAmount
+import com.expensetracker.data.dao.PayeeAmount
+import com.expensetracker.ui.theme.*
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import java.text.NumberFormat
 import java.util.*
 import kotlin.math.abs
@@ -35,9 +41,13 @@ fun InsightsScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+        
+        // Clean Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -45,26 +55,29 @@ fun InsightsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Financial Insights",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    text = "Insights",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
                 
-                IconButton(
+                FilledTonalButton(
                     onClick = { viewModel.refreshInsights() }
                 ) {
                     Icon(
                         Icons.Filled.Refresh,
                         contentDescription = "Refresh",
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(16.dp)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Refresh")
                 }
             }
         }
         
-        // Time Period Filter
+        // Simple Time Period Selector
         item {
-            TimePeriodSelector(
+            CleanTimePeriodSelector(
                 selectedPeriod = uiState.selectedPeriod,
                 onPeriodSelected = viewModel::selectTimePeriod
             )
@@ -73,22 +86,26 @@ fun InsightsScreen(
         when {
             uiState.isLoading -> {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(40.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator()
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Analyzing your finances...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                CircularProgressIndicator()
+                                Text(
+                                    text = "Analyzing your finances...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }
@@ -104,14 +121,14 @@ fun InsightsScreen(
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Icon(
                                 Icons.Filled.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onErrorContainer
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = "Error: ${uiState.errorMessage}",
                                 color = MaterialTheme.colorScheme.onErrorContainer
@@ -122,86 +139,117 @@ fun InsightsScreen(
             }
             
             else -> {
-                // Financial Health Score
+                // Financial Summary
                 item {
-                    FinancialHealthCard(
+                    CleanFinancialSummary(
                         income = uiState.monthlyIncome,
                         expenses = uiState.monthlyExpenses,
                         period = uiState.selectedPeriod
                     )
                 }
                 
-                // Period Summary with Comparison
-                item {
-                    EnhancedPeriodSummaryCard(
-                        income = uiState.monthlyIncome,
-                        expenses = uiState.monthlyExpenses,
-                        balance = uiState.monthlyIncome - uiState.monthlyExpenses,
-                        period = uiState.selectedPeriod,
-                        previousPeriodData = uiState.previousPeriodComparison
-                    )
-                }
-                
-                // Enhanced Chart with Trends
+                // Simple Chart
                 if (uiState.expenseChartData.isNotEmpty()) {
                     item {
-                        EnhancedExpenseChart(
+                        CleanExpenseChart(
                             expenseData = uiState.expenseChartData,
-                            incomeData = uiState.incomeChartData,
-                            period = uiState.selectedPeriod
+                            incomeData = uiState.incomeChartData
                         )
                     }
                 }
                 
-                // Spending Patterns
-                item {
-                    SpendingPatternsCard(
-                        dayOfWeekSpending = uiState.dayOfWeekSpending,
-                        timeOfDaySpending = uiState.timeOfDaySpending
-                    )
-                }
-                
-                // Top Categories with Progress
+                // Top Categories (simplified)
                 if (uiState.categoryExpenses.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Top Spending Categories",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            text = "Top Categories",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
                         )
                     }
                     
                     item {
-                        CategoryExpenseBreakdown(
+                        CleanCategoryBreakdown(
                             categories = uiState.categoryExpenses.take(5),
                             totalExpenses = uiState.monthlyExpenses
                         )
                     }
                 }
                 
-                // Financial Insights & Tips
-                item {
-                    FinancialInsightsCard(
-                        insights = uiState.financialInsights
-                    )
+                // Top Payees (new section)
+                if (uiState.payeeSpending.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Top Payees",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                    
+                    item {
+                        CleanPayeeBreakdown(
+                            payees = uiState.payeeSpending,
+                            totalExpenses = uiState.monthlyExpenses
+                        )
+                    }
                 }
                 
-                // Enhanced Quick Stats
+                // Quick Stats (simplified)
                 item {
-                    EnhancedQuickStatsCard(
+                    CleanQuickStats(
                         totalTransactions = uiState.totalTransactions,
                         avgTransactionAmount = uiState.avgTransactionAmount,
-                        largestExpense = uiState.largestExpense,
-                        savingsRate = uiState.savingsRate,
-                        expenseFrequency = uiState.expenseFrequency
+                        largestExpense = uiState.largestExpense
                     )
                 }
-                
-                // Expense Goals & Budgets
-                if (uiState.budgetStatus.isNotEmpty()) {
-                    item {
-                        BudgetStatusCard(budgetStatus = uiState.budgetStatus)
-                    }
+            }
+        }
+        
+        item { Spacer(modifier = Modifier.height(100.dp)) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CleanTimePeriodSelector(
+    selectedPeriod: TimePeriod,
+    onPeriodSelected: (TimePeriod) -> Unit
+) {
+    val periods = listOf(
+        TimePeriod.MONTHLY to "This Month",
+        TimePeriod.QUARTERLY to "3 Months", 
+        TimePeriod.YEARLY to "This Year"
+    )
+    
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Time Period",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(periods) { (period, label) ->
+                    FilterChip(
+                        onClick = { onPeriodSelected(period) },
+                        label = { Text(label) },
+                        selected = selectedPeriod == period,
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
                 }
             }
         }
@@ -209,28 +257,50 @@ fun InsightsScreen(
 }
 
 @Composable
-private fun FinancialHealthCard(
+private fun CleanFinancialSummary(
     income: Double,
     expenses: Double,
     period: TimePeriod
 ) {
-    val healthScore = calculateFinancialHealth(income, expenses)
-    val healthColor = when {
-        healthScore >= 80 -> Color(0xFF4CAF50)
-        healthScore >= 60 -> Color(0xFFFF9800)
-        else -> Color(0xFFE57373)
-    }
+    val balance = income - expenses
+    val isPositive = balance >= 0
     
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = healthColor.copy(alpha = 0.1f)
-        )
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Text(
+                text = "Financial Summary",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold
+                )
+            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FinancialMetricCard(
+                    title = "Income",
+                    amount = income,
+                    icon = Icons.Filled.TrendingUp,
+                    color = SuccessGreen,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                FinancialMetricCard(
+                    title = "Expenses",
+                    amount = expenses,
+                    icon = Icons.Filled.TrendingDown,
+                    color = ErrorRed,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            
+            // Net Balance
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -238,101 +308,34 @@ private fun FinancialHealthCard(
             ) {
                 Column {
                     Text(
-                        text = "Financial Health Score",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        text = "Net Balance",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        )
                     )
                     Text(
-                        text = getHealthDescription(healthScore),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "${if (isPositive) "+" else "-"}₹${String.format("%,.0f", kotlin.math.abs(balance))}",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = if (isPositive) SuccessGreen else ErrorRed
+                        )
                     )
                 }
                 
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(healthColor, CircleShape),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = (if (isPositive) SuccessGreen else ErrorRed).copy(alpha = 0.15f)
                 ) {
-                    Text(
-                        text = "${healthScore.toInt()}",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                    Icon(
+                        if (isPositive) Icons.Filled.TrendingUp else Icons.Filled.TrendingDown,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
+                        tint = if (isPositive) SuccessGreen else ErrorRed
                     )
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            LinearProgressIndicator(
-                progress = healthScore / 100f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = healthColor,
-                trackColor = healthColor.copy(alpha = 0.3f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun EnhancedPeriodSummaryCard(
-    income: Double,
-    expenses: Double,
-    balance: Double,
-    period: TimePeriod,
-    previousPeriodData: PreviousPeriodComparison?
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Text(
-                text = "This ${period.name.lowercase().replaceFirstChar { it.uppercase() }}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                FinancialMetricCard(
-                    title = "Income",
-                    amount = income,
-                    icon = Icons.Filled.TrendingUp,
-                    color = Color(0xFF4CAF50),
-                    changePercentage = previousPeriodData?.incomeChange
-                )
-                
-                FinancialMetricCard(
-                    title = "Expenses",
-                    amount = expenses,
-                    icon = Icons.Filled.TrendingDown,
-                    color = Color(0xFFE57373),
-                    changePercentage = previousPeriodData?.expenseChange
-                )
-                
-                FinancialMetricCard(
-                    title = "Balance",
-                    amount = abs(balance),
-                    icon = if (balance >= 0) Icons.Filled.AccountBalance else Icons.Filled.Warning,
-                    color = if (balance >= 0) Color(0xFF4CAF50) else Color(0xFFE57373),
-                    changePercentage = previousPeriodData?.balanceChange
-                )
             }
         }
     }
@@ -344,289 +347,99 @@ private fun FinancialMetricCard(
     amount: Double,
     icon: ImageVector,
     color: Color,
-    changePercentage: Double?
+    modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = color.copy(alpha = 0.1f)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
-        }
-        
-        Text(
-            text = "₹${formatAmount(amount)}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        
-        changePercentage?.let { change ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = if (change >= 0) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
-                    contentDescription = null,
-                    tint = if (change >= 0) Color(0xFF4CAF50) else Color(0xFFE57373),
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = "${abs(change).toInt()}%",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (change >= 0) Color(0xFF4CAF50) else Color(0xFFE57373)
-                )
-            }
+            
+            Text(
+                text = "₹${String.format("%,.0f", amount)}",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = color
+            )
         }
     }
 }
 
 @Composable
-private fun EnhancedExpenseChart(
+private fun CleanExpenseChart(
     expenseData: List<ChartData>,
-    incomeData: List<ChartData>,
-    period: TimePeriod
+    incomeData: List<ChartData>
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Income vs Expenses Trend",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Chart legend
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                ChartLegendItem("Expenses", Color(0xFFE57373))
-                ChartLegendItem("Income", Color(0xFF4CAF50))
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Enhanced bar chart with both income and expenses
-            val maxValue = maxOf(
-                expenseData.maxOfOrNull { it.value } ?: 1f,
-                incomeData.maxOfOrNull { it.value } ?: 1f
-            )
-            
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                expenseData.forEachIndexed { index, expenseItem ->
-                    val incomeItem = incomeData.getOrNull(index)
-                    
-                    Column {
-                        Text(
-                            text = expenseItem.label,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium
-                        )
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                // Expense bar
-                                LinearProgressIndicator(
-                                    progress = if (maxValue > 0) expenseItem.value / maxValue else 0f,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(RoundedCornerShape(4.dp)),
-                                    color = Color(0xFFE57373),
-                                    trackColor = Color(0xFFE57373).copy(alpha = 0.2f)
-                                )
-                                
-                                Spacer(modifier = Modifier.height(4.dp))
-                                
-                                // Income bar
-                                incomeItem?.let {
-                                    LinearProgressIndicator(
-                                        progress = if (maxValue > 0) it.value / maxValue else 0f,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(8.dp)
-                                            .clip(RoundedCornerShape(4.dp)),
-                                        color = Color(0xFF4CAF50),
-                                        trackColor = Color(0xFF4CAF50).copy(alpha = 0.2f)
-                                    )
-                                }
-                            }
-                            
-                            Spacer(modifier = Modifier.width(12.dp))
-                            
-                            Column(
-                                horizontalAlignment = Alignment.End
-                            ) {
-                                Text(
-                                    text = "₹${formatAmount(expenseItem.value.toDouble())}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color(0xFFE57373)
-                                )
-                                incomeItem?.let {
-                                    Text(
-                                        text = "₹${formatAmount(it.value.toDouble())}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = Color(0xFF4CAF50)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChartLegendItem(
-    label: String,
-    color: Color
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(12.dp)
-                .background(color, CircleShape)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall
-        )
-    }
-}
-
-@Composable
-private fun SpendingPatternsCard(
-    dayOfWeekSpending: Map<String, Double>,
-    timeOfDaySpending: Map<String, Double>
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Spending Patterns",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Day of week pattern
-            Text(
-                text = "Busiest Spending Days",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            val maxDaySpending = dayOfWeekSpending.values.maxOrNull() ?: 1.0
-            dayOfWeekSpending.forEach { (day, amount) ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = day,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.width(60.dp)
-                    )
-                    
-                    LinearProgressIndicator(
-                        progress = (amount / maxDaySpending).toFloat(),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = MaterialTheme.colorScheme.secondary,
-                        trackColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                    )
-                    
-                    Text(
-                        text = "₹${formatAmount(amount)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.width(80.dp),
-                        textAlign = TextAlign.End
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-            
-            if (timeOfDaySpending.isNotEmpty() && timeOfDaySpending.values.any { it > 0 }) {
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "Time of Day Spending",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                text = "Expense Trend",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold
                 )
+            )
+            
+            // Simple bar chart representation
+            if (expenseData.isNotEmpty()) {
+                val maxAmount = (expenseData + incomeData).maxOfOrNull { it.value.toDouble() } ?: 1.0
                 
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                val maxTimeSpending = timeOfDaySpending.values.maxOrNull() ?: 1.0
-                timeOfDaySpending.forEach { (timeSlot, amount) ->
-                    if (amount > 0) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    expenseData.take(7).forEach { data ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = timeSlot,
+                                text = data.label,
                                 style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.width(120.dp)
+                                modifier = Modifier.width(60.dp)
                             )
                             
                             LinearProgressIndicator(
-                                progress = (amount / maxTimeSpending).toFloat(),
+                                progress = (data.value.toDouble() / maxAmount).toFloat(),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = MaterialTheme.colorScheme.tertiary,
-                                trackColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)
+                                    .height(12.dp)
+                                    .clip(RoundedCornerShape(6.dp)),
+                                color = ErrorRed,
+                                trackColor = ErrorRed.copy(alpha = 0.2f)
                             )
                             
                             Text(
-                                text = "₹${formatAmount(amount)}",
-                                style = MaterialTheme.typography.bodySmall,
+                                text = "₹${String.format("%.0f", data.value)}",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
                                 modifier = Modifier.width(80.dp),
                                 textAlign = TextAlign.End
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
                     }
                 }
             }
@@ -635,207 +448,224 @@ private fun SpendingPatternsCard(
 }
 
 @Composable
-private fun CategoryExpenseBreakdown(
+private fun CleanCategoryBreakdown(
     categories: List<CategoryAmount>,
     totalExpenses: Double
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            categories.forEach { categoryAmount ->
-                val percentage = if (totalExpenses > 0) (categoryAmount.total / totalExpenses) * 100 else 0.0
+            categories.forEach { category ->
+                val percentage = if (totalExpenses > 0) (category.total / totalExpenses * 100) else 0.0
                 
-                Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = category.category,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                        LinearProgressIndicator(
+                            progress = (percentage / 100).toFloat(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    Column(
+                        horizontalAlignment = Alignment.End
+                    ) {
+                        Text(
+                            text = "₹${String.format("%,.0f", category.total)}",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Text(
+                            text = "${String.format("%.1f", percentage)}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CleanPayeeBreakdown(
+    payees: List<PayeeAmount>,
+    totalExpenses: Double
+) {
+    var selectedPayee by remember { mutableStateOf(null as String?) }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            payees.forEach { payee ->
+                val percentage = if (totalExpenses > 0) (payee.total / totalExpenses * 100) else 0.0
+                
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { selectedPayee = payee.payee },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = categoryAmount.category ?: "Uncategorized",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = payee.payee,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                maxLines = 1
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = (percentage / 100).toFloat(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = MaterialTheme.colorScheme.secondary,
+                                trackColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
                         
                         Column(
                             horizontalAlignment = Alignment.End
                         ) {
                             Text(
-                                text = "₹${formatAmount(categoryAmount.total)}",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE57373)
+                                text = "₹${String.format("%,.0f", payee.total)}",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
                             )
                             Text(
-                                text = "${percentage.toInt()}%",
+                                text = "${String.format("%.1f", percentage)}%",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
+                        
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            contentDescription = "View transactions",
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    LinearProgressIndicator(
-                        progress = (percentage / 100).toFloat(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = getRandomCategoryColor(categoryAmount.category ?: "Uncategorized"),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun FinancialInsightsCard(
-    insights: List<FinancialInsight>
-) {
-    if (insights.isEmpty()) return
-    
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Financial Insights & Tips",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
             
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            insights.forEach { insight ->
-                FinancialInsightItem(insight = insight)
-                Spacer(modifier = Modifier.height(12.dp))
+            if (payees.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "💡 Tip: Tap on a payee to see all transactions",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
-}
-
-@Composable
-private fun FinancialInsightItem(
-    insight: FinancialInsight
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(
-            imageVector = insight.icon,
-            contentDescription = null,
-            tint = insight.color,
-            modifier = Modifier.size(20.dp)
+    
+    // Show detailed payee dialog
+    selectedPayee?.let { payeeName ->
+        PayeeDetailsDialog(
+            payeeName = payeeName,
+            onDismiss = { selectedPayee = null }
         )
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = insight.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = insight.description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 
 @Composable
-private fun EnhancedQuickStatsCard(
+private fun CleanQuickStats(
     totalTransactions: Int,
     avgTransactionAmount: Double,
-    largestExpense: Double,
-    savingsRate: Double,
-    expenseFrequency: Double
+    largestExpense: Double
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Quick Stats",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold
+                )
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // First row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                QuickStatItem(
-                    title = "Transactions",
+                StatItem(
+                    label = "Transactions",
                     value = totalTransactions.toString(),
-                    icon = Icons.Filled.Receipt,
-                    color = MaterialTheme.colorScheme.primary
+                    icon = Icons.Filled.Receipt
                 )
                 
-                QuickStatItem(
-                    title = "Avg. Amount",
-                    value = "₹${formatAmount(avgTransactionAmount)}",
-                    icon = Icons.Filled.Calculate,
-                    color = MaterialTheme.colorScheme.secondary
+                Divider(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .width(1.dp)
                 )
                 
-                QuickStatItem(
-                    title = "Largest",
-                    value = "₹${formatAmount(largestExpense)}",
-                    icon = Icons.Filled.TrendingUp,
-                    color = Color(0xFFE57373)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Second row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                QuickStatItem(
-                    title = "Savings Rate",
-                    value = "${savingsRate.toInt()}%",
-                    icon = Icons.Filled.Savings,
-                    color = Color(0xFF4CAF50)
+                StatItem(
+                    label = "Avg Amount",
+                    value = "₹${String.format("%.0f", avgTransactionAmount)}",
+                    icon = Icons.Filled.TrendingFlat
                 )
                 
-                QuickStatItem(
-                    title = "Daily Spending",
-                    value = "₹${formatAmount(expenseFrequency)}",
-                    icon = Icons.Filled.CalendarToday,
-                    color = MaterialTheme.colorScheme.tertiary
+                Divider(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .width(1.dp)
                 )
                 
-                QuickStatItem(
-                    title = "Health Score",
-                    value = "${calculateFinancialHealth(0.0, 0.0).toInt()}",
-                    icon = Icons.Filled.HealthAndSafety,
-                    color = Color(0xFFFF9800)
+                StatItem(
+                    label = "Largest",
+                    value = "₹${String.format("%.0f", largestExpense)}",
+                    icon = Icons.Filled.KeyboardArrowUp
                 )
             }
         }
@@ -843,138 +673,32 @@ private fun EnhancedQuickStatsCard(
 }
 
 @Composable
-private fun QuickStatItem(
-    title: String,
+private fun StatItem(
+    label: String,
     value: String,
-    icon: ImageVector,
-    color: Color
+    icon: ImageVector
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(100.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary
         )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
         Text(
             text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = color,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = FontWeight.Bold
+            )
         )
-        
         Text(
-            text = title,
+            text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
         )
-    }
-}
-
-@Composable
-private fun BudgetStatusCard(
-    budgetStatus: List<BudgetStatus>
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Budget Status",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            budgetStatus.forEach { budget ->
-                BudgetStatusItem(budget = budget)
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun BudgetStatusItem(
-    budget: BudgetStatus
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = budget.category,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            
-            Text(
-                text = "₹${formatAmount(budget.spent)} / ₹${formatAmount(budget.budget)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        LinearProgressIndicator(
-            progress = (budget.spent / budget.budget).toFloat().coerceAtMost(1f),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            color = if (budget.spent > budget.budget) Color(0xFFE57373) else Color(0xFF4CAF50),
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TimePeriodSelector(
-    selectedPeriod: TimePeriod,
-    onPeriodSelected: (TimePeriod) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Time Period",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(TimePeriod.values()) { period ->
-                    FilterChip(
-                        onClick = { onPeriodSelected(period) },
-                        label = { Text(period.name.lowercase().replaceFirstChar { it.uppercase() }) },
-                        selected = selectedPeriod == period
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -1034,4 +758,209 @@ data class BudgetStatus(
     val category: String,
     val budget: Double,
     val spent: Double
-) 
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PayeeDetailsDialog(
+    payeeName: String,
+    onDismiss: () -> Unit,
+    viewModel: InsightsViewModel = hiltViewModel()
+) {
+    var transactions by remember { mutableStateOf(emptyList<com.expensetracker.data.entity.Transaction>()) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    LaunchedEffect(payeeName) {
+        try {
+            // Get transactions for this payee
+            viewModel.getTransactionsForPayee(payeeName).collect { transactionList ->
+                transactions = transactionList
+                isLoading = false
+            }
+        } catch (e: Exception) {
+            isLoading = false
+        }
+    }
+    
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.8f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = payeeName,
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        Text(
+                            text = "Transaction History",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                    
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Filled.Close, contentDescription = "Close")
+                    }
+                }
+                
+                Divider()
+                
+                // Content
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (transactions.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Receipt,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                text = "No transactions found",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    }
+                } else {
+                    // Transaction list
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Summary
+                        item {
+                            val totalAmount = transactions.sumOf { it.amount }
+                            val transactionCount = transactions.size
+                            
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = "Total Spent",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = "₹${String.format("%,.0f", totalAmount)}",
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
+                                    }
+                                    
+                                    Column(
+                                        horizontalAlignment = Alignment.End
+                                    ) {
+                                        Text(
+                                            text = "Transactions",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = transactionCount.toString(),
+                                            style = MaterialTheme.typography.titleLarge.copy(
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Transaction items
+                        items(transactions) { transaction ->
+                            PayeeTransactionItem(transaction = transaction)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PayeeTransactionItem(
+    transaction: com.expensetracker.data.entity.Transaction
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = transaction.category ?: "Uncategorized",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
+                
+                val localDateTime = transaction.timestamp.toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+                Text(
+                    text = "${localDateTime.dayOfMonth}/${localDateTime.monthNumber}/${localDateTime.year}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            }
+            
+            Text(
+                text = "₹${String.format("%,.0f", transaction.amount)}",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = ErrorRed
+            )
+        }
+    }
+} 

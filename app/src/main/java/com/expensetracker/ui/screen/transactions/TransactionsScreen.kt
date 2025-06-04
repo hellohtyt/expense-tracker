@@ -1,6 +1,7 @@
 package com.expensetracker.ui.screen.transactions
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,7 @@ import com.expensetracker.data.entity.TransactionType
 import com.expensetracker.data.entity.Category
 import com.expensetracker.ui.component.TransactionDetailsDialog
 import com.expensetracker.ui.component.CategorySelectionDialog
+import com.expensetracker.ui.theme.*
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import java.text.NumberFormat
@@ -38,154 +40,211 @@ fun TransactionsScreen(
     var selectedTransactionForDetails by remember { mutableStateOf(null as Transaction?) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        // Header with selection controls
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        item { Spacer(modifier = Modifier.height(8.dp)) }
+        
+        // Clean Header
+        item {
             if (uiState.isSelectionMode) {
-                Text(
-                    text = "${uiState.selectedTransactionIds.size} selected",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Row {
-                    TextButton(
-                        onClick = { viewModel.toggleSelectAll() }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(if (uiState.isAllSelected) "Deselect All" else "Select All")
-                    }
-                    
-                    IconButton(
-                        onClick = { showDeleteConfirmation = true },
-                        enabled = uiState.selectedTransactionIds.isNotEmpty()
-                    ) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete selected")
-                    }
-                    
-                    IconButton(
-                        onClick = { viewModel.exitSelectionMode() }
-                    ) {
-                        Icon(Icons.Filled.Close, contentDescription = "Exit selection")
+                        Text(
+                            text = "${uiState.selectedTransactionIds.size} selected",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilledTonalButton(
+                                onClick = { viewModel.toggleSelectAll() }
+                            ) {
+                                Text(if (uiState.isAllSelected) "Deselect All" else "Select All")
+                            }
+                            
+                            IconButton(
+                                onClick = { showDeleteConfirmation = true },
+                                enabled = uiState.selectedTransactionIds.isNotEmpty()
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Delete selected")
+                            }
+                            
+                            IconButton(
+                                onClick = { viewModel.exitSelectionMode() }
+                            ) {
+                                Icon(Icons.Filled.Close, contentDescription = "Exit selection")
+                            }
+                        }
                     }
                 }
             } else {
-                Text(
-                    text = "Transactions",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                if (uiState.transactions.isNotEmpty()) {
-                    Text(
-                        text = "${uiState.transactions.size} transactions",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Transactions",
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                        
+                        if (uiState.transactions.isNotEmpty()) {
+                            Text(
+                                text = "${uiState.transactions.size} total transactions",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
         
         // Content
         when {
             uiState.isLoading -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                CircularProgressIndicator()
+                                Text(
+                                    text = "Loading transactions...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
             
             uiState.errorMessage != null -> {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Error,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Error: ${uiState.errorMessage}",
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
-                    )
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Error,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = "Error: ${uiState.errorMessage}",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
             
             uiState.transactions.isEmpty() -> {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        Icons.Filled.Receipt,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No transactions found",
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "Your transactions will appear here once you sync SMS or add them manually",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Filled.Receipt,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                text = "No transactions found",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Your transactions will appear here once you sync SMS or add them manually",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
                 }
             }
             
             else -> {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(uiState.transactions) { transaction ->
-                        SelectableTransactionItem(
-                            transaction = transaction,
-                            isSelected = uiState.selectedTransactionIds.contains(transaction.id),
-                            isSelectionMode = uiState.isSelectionMode,
-                            categories = categories,
-                            onClick = { 
-                                if (uiState.isSelectionMode) {
-                                    viewModel.toggleTransactionSelection(transaction.id)
-                                } else {
-                                    selectedTransactionForDetails = transaction
-                                }
-                            },
-                            onLongClick = {
-                                if (!uiState.isSelectionMode) {
-                                    viewModel.enterSelectionMode()
-                                    viewModel.toggleTransactionSelection(transaction.id)
-                                }
-                            },
-                            onCategoryUpdate = { categoryName ->
-                                viewModel.updateTransactionCategory(transaction, categoryName)
+                items(uiState.transactions) { transaction ->
+                    CleanTransactionItem(
+                        transaction = transaction,
+                        isSelected = uiState.selectedTransactionIds.contains(transaction.id),
+                        isSelectionMode = uiState.isSelectionMode,
+                        categories = categories,
+                        onClick = { 
+                            if (uiState.isSelectionMode) {
+                                viewModel.toggleTransactionSelection(transaction.id)
+                            } else {
+                                selectedTransactionForDetails = transaction
                             }
-                        )
-                    }
+                        },
+                        onLongClick = {
+                            if (!uiState.isSelectionMode) {
+                                viewModel.enterSelectionMode()
+                                viewModel.toggleTransactionSelection(transaction.id)
+                            }
+                        },
+                        onCategoryUpdate = { categoryName ->
+                            viewModel.updateTransactionCategory(transaction, categoryName)
+                        }
+                    )
                 }
             }
         }
+        
+        item { Spacer(modifier = Modifier.height(100.dp)) }
     }
     
     // Delete confirmation dialog
@@ -207,7 +266,9 @@ fun TransactionsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) {
+                TextButton(
+                    onClick = { showDeleteConfirmation = false }
+                ) {
                     Text("Cancel")
                 }
             }
@@ -227,9 +288,9 @@ fun TransactionsScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SelectableTransactionItem(
+private fun CleanTransactionItem(
     transaction: Transaction,
     isSelected: Boolean,
     isSelectionMode: Boolean,
@@ -238,7 +299,8 @@ private fun SelectableTransactionItem(
     onLongClick: () -> Unit,
     onCategoryUpdate: (String?) -> Unit
 ) {
-    var showCategoryDialog by remember { mutableStateOf(false) }
+    val isCredit = transaction.type == TransactionType.CREDIT
+    val amountColor = if (isCredit) SuccessGreen else ErrorRed
     
     Card(
         modifier = Modifier
@@ -247,150 +309,119 @@ private fun SelectableTransactionItem(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        elevation = if (isSelected) CardDefaults.cardElevation(defaultElevation = 8.dp) 
-                   else CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = if (isSelected) 
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        else 
-            CardDefaults.cardColors()
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) 
+                MaterialTheme.colorScheme.primaryContainer 
+            else 
+                MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Checkbox in selection mode
+            // Selection checkbox (only show in selection mode)
             if (isSelectionMode) {
                 Checkbox(
                     checked = isSelected,
                     onCheckedChange = { onClick() }
                 )
-                Spacer(modifier = Modifier.width(8.dp))
             }
             
-            // Transaction type indicator
+            // Transaction type icon
             Surface(
                 modifier = Modifier.size(40.dp),
-                shape = RoundedCornerShape(20.dp),
-                color = if (transaction.type == TransactionType.CREDIT) 
-                    MaterialTheme.colorScheme.primaryContainer 
-                else 
-                    MaterialTheme.colorScheme.errorContainer
+                shape = RoundedCornerShape(12.dp),
+                color = amountColor.copy(alpha = 0.1f)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (transaction.type == TransactionType.CREDIT) 
-                            Icons.Filled.TrendingUp 
-                        else 
-                            Icons.Filled.TrendingDown,
-                        contentDescription = null,
-                        tint = if (transaction.type == TransactionType.CREDIT) 
-                            MaterialTheme.colorScheme.onPrimaryContainer 
-                        else 
-                            MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = if (isCredit) Icons.Filled.TrendingUp else Icons.Filled.TrendingDown,
+                    contentDescription = null,
+                    tint = amountColor,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                )
             }
-            
-            Spacer(modifier = Modifier.width(16.dp))
             
             // Transaction details
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Payee or description
                 Text(
                     text = transaction.payee ?: "Transaction",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                // Category chip with edit functionality
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Category chip that can be clicked to change
-                    if (!isSelectionMode) {
-                        AssistChip(
-                            onClick = { showCategoryDialog = true },
-                            label = { 
-                                Text(
-                                    text = transaction.category ?: "Add Category",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Filled.Category,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            },
-                            modifier = Modifier.weight(1f, false)
-                        )
-                    } else {
-                        Text(
-                            text = transaction.category ?: "Uncategorized",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    
+                    Text(
+                        text = transaction.category ?: "Uncategorized",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    )
                     val localDateTime = transaction.timestamp.toLocalDateTime(TimeZone.currentSystemDefault())
                     Text(
-                        text = "${localDateTime.dayOfMonth}/${localDateTime.monthNumber}",
+                        text = "${localDateTime.dayOfMonth}/${localDateTime.monthNumber}/${localDateTime.year}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
                 
-                // SMS Sender if available
-                Text(
-                    text = "from ${transaction.sender}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (transaction.sender.isNotBlank()) {
+                    Text(
+                        text = "From: ${transaction.sender}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             
-            Spacer(modifier = Modifier.width(8.dp))
-            
             // Amount
-            Text(
-                text = "${if (transaction.type == TransactionType.CREDIT) "+" else "-"}₹${NumberFormat.getNumberInstance(Locale("en", "IN")).format(transaction.amount)}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (transaction.type == TransactionType.CREDIT) 
-                    MaterialTheme.colorScheme.primary 
-                else 
-                    MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.End
-            )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "${if (isCredit) "+" else "-"}₹${String.format("%,.0f", transaction.amount)}",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = amountColor
+                )
+                
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = amountColor.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = if (isCredit) "Income" else "Expense",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Medium
+                        ),
+                        color = amountColor,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
-    }
-    
-    // Category Selection Dialog
-    if (showCategoryDialog) {
-        CategorySelectionDialog(
-            categories = categories,
-            currentCategory = transaction.category,
-            onCategorySelected = { newCategory ->
-                onCategoryUpdate(newCategory)
-                showCategoryDialog = false
-            },
-            onDismiss = { showCategoryDialog = false }
-        )
     }
 } 

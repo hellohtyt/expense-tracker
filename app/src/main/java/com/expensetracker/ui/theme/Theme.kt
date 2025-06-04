@@ -16,15 +16,53 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = PrimaryGreen,
+    onPrimary = NeutralGray50,
+    primaryContainer = PrimaryGreenDark,
+    onPrimaryContainer = NeutralGray50,
+    secondary = SecondaryBlue,
+    onSecondary = NeutralGray50,
+    secondaryContainer = SecondaryBlueDark,
+    onSecondaryContainer = NeutralGray50,
+    tertiary = AccentPurple,
+    onTertiary = NeutralGray50,
+    background = BackgroundGradientStartDark,
+    onBackground = NeutralGray100,
+    surface = SurfaceGlassDark,
+    onSurface = NeutralGray100,
+    surfaceVariant = CardGradientStartDark,
+    onSurfaceVariant = NeutralGray300,
+    error = ErrorRed,
+    onError = NeutralGray50,
+    errorContainer = ErrorRedLight,
+    onErrorContainer = NeutralGray900,
+    outline = NeutralGray600,
+    outlineVariant = NeutralGray700
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = PrimaryGreen,
+    onPrimary = NeutralGray50,
+    primaryContainer = SuccessGreenLight,
+    onPrimaryContainer = NeutralGray900,
+    secondary = SecondaryBlue,
+    onSecondary = NeutralGray50,
+    secondaryContainer = androidx.compose.ui.graphics.Color(0xFFDBEAFE),
+    onSecondaryContainer = NeutralGray900,
+    tertiary = AccentPurple,
+    onTertiary = NeutralGray50,
+    background = BackgroundGradientStart,
+    onBackground = NeutralGray900,
+    surface = SurfaceGlass,
+    onSurface = NeutralGray900,
+    surfaceVariant = CardGradientStart,
+    onSurfaceVariant = NeutralGray600,
+    error = ErrorRed,
+    onError = NeutralGray50,
+    errorContainer = ErrorRedLight,
+    onErrorContainer = NeutralGray900,
+    outline = NeutralGray400,
+    outlineVariant = NeutralGray300
 )
 
 @Composable
@@ -47,8 +85,8 @@ fun ExpenseTrackerTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            window.statusBarColor = colorScheme.background.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 

@@ -1,6 +1,7 @@
 package com.expensetracker.repository
 
 import com.expensetracker.data.dao.CategoryAmount
+import com.expensetracker.data.dao.PayeeAmount
 import com.expensetracker.data.dao.TransactionDao
 import com.expensetracker.data.entity.Transaction
 import com.expensetracker.data.entity.TransactionType
@@ -83,4 +84,15 @@ class TransactionRepository @Inject constructor(
     
     suspend fun deleteTransactionById(transactionId: String) = 
         transactionDao.deleteTransactionById(transactionId)
+    
+    // Smart categorization
+    suspend fun getLastCategoryForPayee(payee: String): String? = 
+        transactionDao.getLastCategoryForPayee(payee)
+    
+    // Payee analytics
+    suspend fun getPayeeWiseSpending(): List<PayeeAmount> = 
+        transactionDao.getPayeeWiseSpending()
+    
+    suspend fun getPayeeWiseSpendingByDateRange(startDate: Instant, endDate: Instant): List<PayeeAmount> = 
+        transactionDao.getPayeeWiseSpendingByDateRange(startDate, endDate)
 } 
